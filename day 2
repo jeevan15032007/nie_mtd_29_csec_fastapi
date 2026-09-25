@@ -1,0 +1,54 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+app= FastAPI()
+@app.get("/")
+def home():
+    return {"message": "Enterprise IT Service desk ...."}
+db = {
+    1:{"id":1,"tittle":"computer is not on","description":"power button is not working","category":"hardware","status":"new"},
+    
+    2:{"id":2,"tittle":"internet not working","description":"wifi problem","category":"hardware","status":"new"}
+}
+#SCHEMAS
+class TicketCreate(BaseModel):
+    tittle :str
+    description :str
+    category:str
+    status:str
+    
+class TicketResponse(TicketCreate):
+    id:int
+    tittle :str
+    description :str
+    category:str
+    status:str
+
+#API's
+@app.get("/tickets")
+def get_ticket_read_all():
+    return list(db.values())   
+@app.get("/tickets/{id}")
+def get_ticket_read_one(id:int):
+    if id not in db:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return db[id]   
+
+@app.post("/tickets",status_code=201,response_model=TicketResponse) 
+def ticket_Create(ticket_payload:TicketCreate):
+    new_id = max(db.keys() ,default=0)+ 1
+    db[new_id] = {"id":new_id,**ticket_payload.model_dump()}  
+    return db[new_id] 
+
+@app.put("/tickets/{id}",response_model=TicketResponse) 
+def ticket_Update(id:int, payload:TicketCreate):
+    if id not in db:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    db[id]={"id":id, **payload.model_dump()}
+    return db[id] 
+
+@app.delete("/tickets/{id}")
+def ticket_Delete(id:int):
+    if id not in db:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    del db[id]
+    return {"message": "Ticket deleted successfully"}
